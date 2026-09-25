@@ -3,7 +3,8 @@
 <img width="702" height="1600" alt="Image" src="https://github.com/user-attachments/assets/9a0f4f0e-dd0b-4097-b898-aa80a8ec6085" />
 
 ``` 📊 Dashboard de Contas MensaisUm aplicativo móvel simples e eficiente para controle e gerenciamento de finanças pessoais, desenvolvido utilizando React Native e Expo.
- 📱 Sobre o ProjetoEste aplicativo foi criado com o objetivo de facilitar o acompanhamento de despesas diárias e mensais. Ele calcula automaticamente o saldo total gasto no mês à medida que novas contas são inseridas, permitindo uma visão clara da saúde financeira atualizada em tempo real.Principais Funcionalidades:Resumo Financeiro: Exibição destacada do valor total acumulado das contas.
+ 📱 Sobre o Projeto
+ Este aplicativo foi criado com o objetivo de facilitar o acompanhamento de despesas diárias e mensais. Ele calcula automaticamente o saldo total gasto no mês à medida que novas contas são inseridas, permitindo uma visão clara da saúde financeira atualizada em tempo real.Principais Funcionalidades:Resumo Financeiro: Exibição destacada do valor total acumulado das contas.
  Formulário Dinâmico: Adição simplificada de despesas informando descrição e valor em reais.
  Listagem Otimizada: Visualização das contas cadastradas através de uma lista fluida e de alto desempenho.
  Persistência de Dados: Armazenamento local para garantir que os dados permaneçam salvos mesmo após fechar o aplicativo.
