@@ -36,6 +36,10 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -44,7 +48,41 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "desktop:dev": "expo export --platform web && node scripts/prepare-desktop.cjs && electron desktop/main.cjs",
+    "desktop:build": "expo export --platform web && node scripts/prepare-desktop.cjs && electron-builder --win nsis --x64"
   },
-  "private": true
+  "private": true,
+  "build": {
+    "appId": "com.diegok29.meuappcontas.desktop",
+    "productName": "Meu App Contas",
+    "directories": {
+      "output": "release",
+      "app": "desktop"
+    },
+    "files": [
+      "dist/**/*",
+      "main.cjs",
+      "preload.cjs",
+      "package.json",
+      "!node_modules/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Meu-App-Contas-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
 }

@@ -5,15 +5,15 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  Keyboard,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Keyboard,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -31,6 +31,15 @@ type Provento = {
   valor: number;
   data: string;
 };
+
+declare global {
+  interface Window {
+    desktopFiles?: {
+      salvarBackup(conteudo: string): Promise<boolean>;
+      abrirBackup(): Promise<string | null>;
+    };
+  }
+}
 
 const STORAGE_KEY = '@meu_app_contas';
 const STORAGE_PROVENTOS_KEY = '@meu_app_proventos';
@@ -107,6 +116,8 @@ const escapeHtml = (valor: string) => valor
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#039;');
 
+const criarIdLancamento = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 export default function App() {
   const [contas, setContas] = useState<Conta[]>(contasIniciais);
   const [descricao, setDescricao] = useState('');
@@ -121,6 +132,7 @@ export default function App() {
   const [tituloRelatorio, setTituloRelatorio] = useState('Minhas contas');
   const [dadosCarregados, setDadosCarregados] = useState(false);
   const [mensagem, setMensagem] = useState('');
+  const [buscaLancamentos, setBuscaLancamentos] = useState('');
   const mensagemTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mostrarMensagem = (texto: string) => {
@@ -273,6 +285,37 @@ export default function App() {
     }, {});
   }, [contas]);
 
+  const lancamentosFiltrados = useMemo(() => {
+    const consulta = buscaLancamentos.trim().toLocaleLowerCase('pt-BR');
+    return [
+      ...contas.map((conta) => ({ ...conta, tipo: 'Gasto' })),
+      ...proventos.map((item) => ({ ...item, categoria: 'Provento', tipo: 'Provento' })),
+    ]
+      .filter((item) => !consulta || `${item.descricao} ${item.categoria} ${item.data}`.toLocaleLowerCase('pt-BR').includes(consulta))
+      .sort((a, b) => (Number(b.id.split('-')[0]) || 0) - (Number(a.id.split('-')[0]) || 0));
+  }, [buscaLancamentos, contas, proventos]);
+
+  const removerLancamento = (tipo: 'Gasto' | 'Provento', id: string) => {
+    const confirmar = () => {
+      if (tipo === 'Gasto') {
+        setContas((atuais) => atuais.filter((item) => item.id !== id));
+      } else {
+        setProventos((atuais) => atuais.filter((item) => item.id !== id));
+      }
+      mostrarMensagem(`${tipo} removido`);
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Remover este ${tipo.toLocaleLowerCase('pt-BR')}?`)) confirmar();
+      return;
+    }
+
+    Alert.alert('Remover lançamento', `Deseja remover este ${tipo.toLocaleLowerCase('pt-BR')}?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: confirmar },
+    ]);
+  };
+
   const adicionarConta = () => {
     if (!descricao.trim() || !valor.trim()) return;
 
@@ -281,7 +324,7 @@ export default function App() {
     if (Number.isNaN(valorNumerico) || valorNumerico <= 0) return;
 
     const novaConta: Conta = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: criarIdLancamento(),
       descricao: descricao.trim(),
       valor: valorNumerico,
       categoria: categoriaSelecionada,
@@ -305,7 +348,7 @@ export default function App() {
 
     Keyboard.dismiss();
     setProventos((anterior) => [{
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: criarIdLancamento(),
       descricao: descricaoProvento.trim(),
       valor: valorNumerico,
       data: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
@@ -321,6 +364,79 @@ export default function App() {
 
   const limparProventos = () => {
     setProventos([]);
+  };
+
+  const exportarBackup = async () => {
+    const backup = JSON.stringify({
+      app: 'meu-app-contas',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      tituloRelatorio,
+      contas,
+      proventos,
+    }, null, 2);
+
+    try {
+      if (window.desktopFiles) {
+        const salvo = await window.desktopFiles.salvarBackup(backup);
+        if (salvo) mostrarMensagem('Backup salvo');
+        return;
+      }
+
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(new Blob([backup], { type: 'application/json' }));
+      link.href = url;
+      link.download = `meu-app-contas-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      mostrarMensagem('Backup baixado');
+    } catch (error) {
+      console.warn('Erro ao salvar backup:', error);
+      mostrarMensagem('Não foi possível salvar o backup');
+    }
+  };
+
+  const importarBackup = async () => {
+    try {
+      const conteudo = window.desktopFiles
+        ? await window.desktopFiles.abrirBackup()
+        : await new Promise<string | null>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json,application/json';
+          input.onchange = () => {
+            const arquivo = input.files?.[0];
+            if (!arquivo) {
+              resolve(null);
+              return;
+            }
+            void arquivo.text().then(resolve).catch(() => resolve(null));
+          };
+          input.click();
+        });
+
+      if (!conteudo) return;
+      const dados = JSON.parse(conteudo) as Record<string, unknown>;
+      if (
+        dados.app !== 'meu-app-contas' ||
+        dados.version !== 1 ||
+        !isListaContasValida(dados.contas) ||
+        !isListaProventosValida(dados.proventos) ||
+        typeof dados.tituloRelatorio !== 'string'
+      ) {
+        mostrarMensagem('Arquivo de backup inválido');
+        return;
+      }
+
+      if (!window.confirm('Substituir os dados atuais pelo conteúdo deste backup?')) return;
+      setContas(dados.contas);
+      setProventos(dados.proventos);
+      setTituloRelatorio(dados.tituloRelatorio);
+      mostrarMensagem('Backup restaurado');
+    } catch (error) {
+      console.warn('Erro ao restaurar backup:', error);
+      mostrarMensagem('Não foi possível ler o backup');
+    }
   };
 
   const abrirFiltro = () => setFiltroAberto((atual) => !atual);
@@ -491,6 +607,32 @@ export default function App() {
                   <Text style={styles.reportButtonText}>Relatório</Text>
                 </View>
               </TouchableOpacity>
+
+              {Platform.OS === 'web' && (
+                <>
+                  <TouchableOpacity
+                    accessibilityLabel="Salvar backup dos dados"
+                    style={styles.fileActionButton}
+                    onPress={exportarBackup}
+                  >
+                    <View style={styles.buttonContent}>
+                      <Icon name="content-save-outline" size={17} color="#dfeafc" />
+                      <Text style={styles.fileActionText}>Backup</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    accessibilityLabel="Restaurar dados de um backup"
+                    style={styles.fileActionButton}
+                    onPress={importarBackup}
+                  >
+                    <View style={styles.buttonContent}>
+                      <Icon name="backup-restore" size={17} color="#dfeafc" />
+                      <Text style={styles.fileActionText}>Restaurar</Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              )}
 
               <TouchableOpacity
                 onPress={() => {
@@ -663,6 +805,51 @@ export default function App() {
             )}
           </View>
 
+          <View style={styles.ledgerCard}>
+            <View style={styles.listHeader}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={[styles.sectionIconBadge, styles.listIconBadge]}>
+                  <Icon name="format-list-bulleted" size={18} color="#60a5fa" />
+                </View>
+                <Text style={styles.sectionTitle}>Lançamentos</Text>
+              </View>
+              <Text style={styles.counter}>{lancamentosFiltrados.length} itens</Text>
+            </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Buscar descrição, categoria ou data"
+              value={buscaLancamentos}
+              onChangeText={setBuscaLancamentos}
+              placeholderTextColor="#8993a4"
+            />
+
+            {lancamentosFiltrados.length === 0 ? (
+              <Text style={styles.emptyLedgerText}>
+                {contas.length + proventos.length ? 'Nenhum lançamento encontrado.' : 'Seus lançamentos aparecerão aqui.'}
+              </Text>
+            ) : lancamentosFiltrados.map((item) => (
+              <View key={`${item.tipo}-${item.id}`} style={styles.ledgerRow}>
+                <View style={styles.itemMain}>
+                  <Text style={styles.ledgerDescription}>{item.descricao}</Text>
+                  <Text style={styles.ledgerMeta}>{item.data}  ·  {item.categoria}</Text>
+                </View>
+                <View style={styles.itemRight}>
+                  <Text style={[styles.ledgerAmount, item.tipo === 'Provento' && styles.ledgerIncome]}>
+                    {item.tipo === 'Provento' ? '+' : '-'}{formatCurrency(item.valor)}
+                  </Text>
+                  <TouchableOpacity
+                    accessibilityLabel={`Remover ${item.descricao}`}
+                    onPress={() => removerLancamento(item.tipo as 'Gasto' | 'Provento', item.id)}
+                    style={styles.ledgerRemoveButton}
+                  >
+                    <Icon name="delete-outline" size={18} color="#fca5a5" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+
           <View style={styles.formCard}>
             <View style={styles.sectionHeaderRow}>
               <View style={[styles.sectionIconBadge, styles.proventoFormIconBadge]}>
@@ -774,6 +961,9 @@ export default function App() {
           </View>
 
         </ScrollView>
+        <View pointerEvents="none" style={styles.watermark}>
+          <Text style={styles.watermarkText}>Designed by D-TecLog</Text>
+        </View>
       </View>
   );
 }
@@ -817,7 +1007,19 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 18,
     paddingTop: 56,
-    paddingBottom: 28,
+    paddingBottom: 48,
+  },
+  watermark: {
+    position: 'absolute',
+    right: 14,
+    bottom: 10,
+    zIndex: 1,
+  },
+  watermarkText: {
+    color: '#9fb3d8',
+    fontSize: 10,
+    fontWeight: '600',
+    opacity: 0.48,
   },
   header: {
     marginBottom: 18,
@@ -875,6 +1077,22 @@ const styles = StyleSheet.create({
     color: '#eaf2ff',
     fontSize: 12,
     fontWeight: '800',
+  },
+  fileActionButton: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#182b40',
+    borderWidth: 1,
+    borderColor: '#38536f',
+  },
+  fileActionText: {
+    color: '#dfeafc',
+    fontSize: 11,
+    fontWeight: '700',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1372,97 +1590,66 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  ledgerCard: {
+    backgroundColor: '#0f1d2c',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#213b57',
+  },
   counter: {
-    color: '#5b6b8a',
+    color: '#9fb3d8',
     fontSize: 12,
     fontWeight: '700',
   },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  itemConta: {
+  ledgerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#0f1d2c',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 10,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#213b57',
-    shadowColor: '#091321',
-    shadowOpacity: 0.32,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    borderColor: '#1b2f45',
+    borderBottomWidth: 0,
   },
   itemMain: {
     flex: 1,
     marginRight: 12,
   },
-  descricao: {
-    fontSize: 17,
+  ledgerDescription: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#18212f',
-    marginBottom: 6,
+    color: '#edf3ff',
+    marginBottom: 4,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  badge: {
-    backgroundColor: '#edf2ff',
-    color: '#2345bd',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
+  ledgerMeta: {
     fontSize: 11,
-    fontWeight: '700',
-  },
-  date: {
-    fontSize: 11,
-    color: '#687a96',
+    color: '#8aa2c9',
     fontWeight: '600',
   },
   itemRight: {
     alignItems: 'flex-end',
   },
-  valor: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#d94a4a',
-    marginBottom: 8,
-  },
-  removeButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#fff1f1',
-  },
-  removeText: {
-    color: '#d94a4a',
-    fontWeight: '700',
-    fontSize: 11,
-  },
-  emptyState: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#18212f',
-    marginBottom: 6,
-  },
-  emptyText: {
+  ledgerAmount: {
     fontSize: 13,
-    color: '#5b6b8a',
+    fontWeight: '800',
+    color: '#fca5a5',
+    marginBottom: 4,
+  },
+  ledgerIncome: {
+    color: '#4ade80',
+  },
+  ledgerRemoveButton: {
+    width: 32,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    backgroundColor: '#3b2028',
+  },
+  emptyLedgerText: {
+    color: '#8aa2c9',
+    fontSize: 13,
+    paddingVertical: 12,
   },
 });
