@@ -10,6 +10,7 @@ web-build/
 expo-env.d.ts
 /release/
 /desktop/dist/
+/desktop/package.json
 
 # Native
 .kotlin/

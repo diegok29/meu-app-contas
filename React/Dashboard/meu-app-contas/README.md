@@ -24,7 +24,7 @@ cd NOME_DO_SEU_REPOSITORIO
 Abra o app Expo Go e escaneie o QR Code que apareceu no seu terminal do VS Code.
 ## Build do Windows
 
-O instalador Windows pode ser gerado localmente com `npm run desktop:build`. Para publicar uma versao no GitHub, atualize a versao em `package.json`, envie as alteracoes e crie/envie uma tag correspondente, por exemplo `v1.0.1`. A GitHub Action gera o instalador e o anexa a uma Release. Tambem e possivel executar a Action manualmente em **Actions > Build Windows > Run workflow** para baixar o instalador como artefato.
+O instalador Windows pode ser gerado localmente com `npm run desktop:build`. Para publicar uma versao no GitHub, atualize a versao em `package.json`, envie as alteracoes e crie/envie uma tag correspondente, por exemplo `v1.0.2`. A GitHub Action gera o instalador e o anexa a uma Release. Tambem e possivel executar a Action manualmente em **Actions > Build Windows > Run workflow** para baixar o instalador como artefato.
 
 ✒️ AutorDesenvolvido com 💙 por [Diego]
 Acesse meu perfil no GitHub. ```
