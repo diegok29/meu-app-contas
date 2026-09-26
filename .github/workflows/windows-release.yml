@@ -12,6 +12,9 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: React/Dashboard/meu-app-contas
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +24,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: React/Dashboard/meu-app-contas/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -32,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Meu-App-Contas-Setup
-          path: release/Meu-App-Contas-Setup-*.exe
+          path: React/Dashboard/meu-app-contas/release/Meu-App-Contas-Setup-*.exe
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -40,4 +44,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: release/Meu-App-Contas-Setup-*.exe
+          files: React/Dashboard/meu-app-contas/release/Meu-App-Contas-Setup-*.exe
