@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f6f2">
+  <title>Meu planner Diário | Gerenciador de tarefas</title>
+  <meta name="api-origin" content="">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202a31;
+      --muted: #737d82;
+      --paper: #f5f6f2;
+      --surface: #fff;
+      --line: #e1e5df;
+      --green: #355de8;
+      --green-dark: #2448c3;
+      --green-soft: #e9edff;
+      --coral: #dc674c;
+      --coral-soft: #fff0e9;
+      --gold: #58631a;
+      --gold-soft: #f1f6d5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      margin: 0;
+      background: linear-gradient(135deg, #f7f8f5 0%, #f0f3f5 100%);
+      color: var(--ink);
+      font-family: "Outfit", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1120px;
+      min-height: 76px;
+      margin: auto;
+      padding: 0 28px;
+    }
+    .brand, .today { display: flex; align-items: center; }
+    .brand { gap: 11px; font-size: 15px; font-weight: 700; letter-spacing: 0; }
+    .brand-mark {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border-radius: 10px;
+      background: #202a31;
+      color: #d9f164;
+      font-family: "Outfit", sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .today { gap: 8px; color: var(--muted); font-size: 13px; }
+    .today-dot { width: 8px; height: 8px; border-radius: 50%; background: #d9f164; box-shadow: 0 0 0 3px rgba(217, 241, 100, 0.24); }
+    main { width: min(100% - 40px, 920px); margin: 22px auto 70px; animation: arrive 420ms ease-out both; }
+    .intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 27px; }
+    .eyebrow { margin: 0 0 10px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+    h1 { margin: 0; font-family: "Outfit", sans-serif; font-size: 48px; font-weight: 700; line-height: 1.04; }
+    h1 em { color: var(--green); font-style: normal; font-weight: 600; }
+    .intro-note { max-width: 230px; margin: 0 0 5px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .overview {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.25fr;
+      overflow: hidden;
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 4px 16px rgba(32, 42, 49, 0.035);
+    }
+    .metric { min-height: 93px; padding: 18px 22px; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: 0; }
+    .metric-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+    .metric-value { font-family: "Outfit", sans-serif; font-size: 28px; font-weight: 600; line-height: 1; }
+    .progress-wrap { display: flex; align-items: center; gap: 12px; margin-top: 11px; }
+    .progress-track { height: 6px; flex: 1; overflow: hidden; border-radius: 99px; background: #e8ebef; }
+    .progress-fill { width: 0; height: 100%; border-radius: inherit; background: var(--green); transition: width 220ms ease; }
+    .progress-label { color: var(--green-dark); font-size: 12px; font-weight: 700; }
+    .panel { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 16px 45px rgba(32, 42, 49, 0.08); }
+    .composer { padding: 22px 24px 20px; border-bottom: 1px solid var(--line); }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    h2 { margin: 0; font-family: "Outfit", sans-serif; font-size: 21px; font-weight: 600; }
+    .editing-label { display: none; color: var(--gold); font-size: 12px; font-weight: 700; }
+    .composer.is-editing .editing-label { display: inline; }
+    .form-row { display: grid; grid-template-columns: minmax(180px, 1fr) 155px 150px auto; gap: 9px; }
+    .field, .search-input {
+      min-width: 0;
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      outline: none;
+      background: #fff;
+      color: var(--ink);
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .field { padding: 0 12px; }
+    .field:focus, .search-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(53, 93, 232, 0.13); }
+    .field::placeholder, .search-input::placeholder { color: #9aa3a6; }
+    .primary-button, .cancel-button, .clear-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 42px;
+      border: 0;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 700;
+      transition: background 150ms ease, transform 150ms ease;
+    }
+    .primary-button { padding: 0 16px; background: var(--green); color: white; box-shadow: 0 5px 12px rgba(53, 93, 232, 0.2); }
+    .primary-button:hover { transform: translateY(-2px); background: var(--green-dark); box-shadow: 0 8px 16px rgba(53, 93, 232, 0.24); }
+    .primary-button:active { transform: translateY(0) scale(0.98); }
+    .primary-button:disabled { cursor: wait; opacity: 0.7; transform: none; }
+    .cancel-button { display: none; padding: 0 12px; background: #f0f2ed; color: var(--ink); }
+    .composer.is-editing .cancel-button { display: inline-flex; }
+    .composer.is-editing .primary-button { background: #202a31; }
+    .list-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 17px 24px; border-bottom: 1px solid var(--line); }
+    .filters { display: flex; gap: 4px; padding: 4px; border-radius: 8px; background: #f0f2ed; }
+    .filter-button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 700; transition: color 150ms ease, background 150ms ease, transform 150ms ease; }
+    .filter-button:hover { color: var(--ink); }
+    .filter-button:active { transform: scale(0.97); }
+    .filter-button[aria-pressed="true"] { background: white; color: var(--green-dark); box-shadow: 0 2px 7px rgba(32, 42, 49, 0.1); }
+    .filter-count { display: inline-grid; min-width: 19px; height: 19px; place-items: center; padding: 0 5px; border-radius: 99px; background: rgba(115, 125, 130, 0.11); font-size: 10px; }
+    .filter-button[aria-pressed="true"] .filter-count { background: var(--green-soft); color: var(--green-dark); }
+    .search-wrap { position: relative; width: min(245px, 36%); }
+    .search-icon { position: absolute; top: 12px; left: 12px; color: var(--muted); font-size: 16px; pointer-events: none; }
+    .search-input { width: 100%; padding: 0 12px 0 36px; font-size: 13px; }
+    .list-heading { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px 8px; }
+    .list-heading h2 { font-size: 20px; }
+    .clear-button { min-height: 32px; padding: 0 8px; background: transparent; color: var(--coral); font-size: 12px; }
+    .clear-button:hover:not(:disabled) { background: var(--coral-soft); }
+    .clear-button:disabled { cursor: default; opacity: 0.4; }
+    .task-list { margin: 0; padding: 0 24px 16px; list-style: none; }
+    .task-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 13px; min-height: 78px; border-bottom: 1px solid #edf0ec; animation: arrive 240ms ease-out both; }
+    .task-row:last-child { border-bottom: 0; }
+    .task-check { width: 19px; height: 19px; margin: 0; accent-color: var(--green); cursor: pointer; }
+    .task-main { min-width: 0; }
+    .task-title { display: block; overflow-wrap: anywhere; font-size: 14px; font-weight: 700; line-height: 1.4; }
+    .task-row.is-complete .task-title { color: #90999d; text-decoration: line-through; }
+    .task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 6px; }
+    .tag { display: inline-flex; align-items: center; min-height: 21px; padding: 0 8px; border-radius: 99px; font-size: 10px; font-weight: 800; }
+    .priority-alta { background: var(--coral-soft); color: #a74732; }
+    .priority-media { background: var(--green-soft); color: var(--green-dark); }
+    .priority-baixa { background: var(--gold-soft); color: var(--gold); }
+    .due-date { color: var(--muted); font-size: 11px; }
+    .due-date.is-overdue { color: #b64f38; font-weight: 700; }
+    .task-actions { display: flex; gap: 4px; }
+    .icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 38px; padding: 0 9px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #5d6870; font-size: 11px; font-weight: 800; transition: color 150ms ease, background 150ms ease, border-color 150ms ease, transform 150ms ease; }
+    .icon-button:hover { transform: translateY(-1px); border-color: var(--line); background: #f5f6f3; color: var(--green-dark); }
+    .icon-button:active { transform: scale(0.97); }
+    .icon-button.delete { color: #a95b4c; }
+    .icon-button.delete:hover { border-color: #f4d9d1; background: var(--coral-soft); color: #a23e2c; }
+    .empty-state { display: none; padding: 42px 20px 48px; text-align: center; }
+    .empty-mark { display: grid; width: 46px; height: 46px; place-items: center; margin: 0 auto 12px; border-radius: 14px; background: var(--gold-soft); color: #66751b; font-size: 20px; }
+    .empty-state strong { display: block; margin-bottom: 5px; font-family: "Outfit", sans-serif; font-size: 19px; font-weight: 600; }
+    .empty-state p { margin: 0; color: var(--muted); font-size: 13px; }
+    .status-message { position: fixed; z-index: 5; right: 24px; bottom: 20px; max-width: min(420px, calc(100% - 32px)); margin: 0; padding: 0; color: transparent; font-size: 13px; font-weight: 700; pointer-events: none; }
+    .status-message.is-visible { padding: 13px 17px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); box-shadow: 0 12px 35px rgba(32, 42, 49, 0.14); animation: toast-in 220ms ease-out both; }
+    .status-message.is-error { border-color: #f0cfc5; color: #a23e2c; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    :focus-visible { outline: 3px solid rgba(53, 93, 232, 0.36); outline-offset: 2px; }
+    @media (max-width: 700px) {
+      .topbar { min-height: 66px; padding: 0 20px; }
+      main { width: min(100% - 28px, 560px); margin-top: 18px; }
+      .intro { align-items: start; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+      h1 { font-size: 40px; }
+      .intro-note { max-width: 360px; }
+      .metric { min-height: 82px; padding: 15px 13px; }
+      .metric-value { font-size: 25px; }
+      .composer { padding: 19px 16px; }
+      .form-row { grid-template-columns: 1fr 1fr; }
+      .title-field { grid-column: 1 / -1; }
+      .form-actions { display: flex; gap: 8px; }
+      .form-actions button { flex: 1; }
+      .list-controls { align-items: stretch; flex-direction: column; padding: 14px 16px; }
+      .filters { align-self: start; max-width: 100%; }
+      .search-wrap { width: 100%; }
+      .list-heading { padding-right: 16px; padding-left: 16px; }
+      .task-list { padding-right: 16px; padding-left: 16px; }
+    }
+    @media (max-width: 420px) {
+      .brand { font-size: 13px; }
+      .today { font-size: 11px; }
+      .overview { grid-template-columns: 1fr 1fr; }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:last-child { grid-column: 1 / -1; min-height: 75px; border-top: 1px solid var(--line); }
+      .task-row { grid-template-columns: 20px minmax(0, 1fr) auto; gap: 9px; }
+      .icon-button { min-width: 36px; min-height: 38px; padding: 0 6px; }
+    }
+    @media (max-width: 520px) {
+      .topbar { width: calc(100% - 32px); min-height: 62px; padding: 0; }
+      main { width: calc(100% - 24px); margin-top: 20px; }
+      h1 { font-size: 36px; }
+      .today { max-width: 145px; justify-content: end; text-align: right; }
+      .composer { padding: 18px 14px; }
+      .form-row { grid-template-columns: 1fr; gap: 9px; }
+      .title-field { grid-column: auto; }
+      .form-actions { display: grid; grid-template-columns: 1fr auto; }
+      .form-actions button { min-height: 44px; }
+      .list-controls { padding: 13px 14px; }
+      .filters { width: 100%; justify-content: space-between; }
+      .filter-button { justify-content: center; gap: 5px; min-height: 38px; padding: 0 8px; }
+      .list-heading { padding: 16px 14px 8px; }
+      .task-list { padding: 0 12px 12px; }
+      .task-row { grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 11px 0; }
+      .task-main { align-self: center; }
+      .task-actions { grid-column: 2; justify-content: flex-end; margin-top: -4px; }
+      .icon-button { min-height: 36px; }
+      .status-message { right: 12px; bottom: 12px; }
+    }
+    @media (max-width: 360px) {
+      .brand { gap: 8px; font-size: 11px; }
+      .today { font-size: 10px; }
+      .filter-button { font-size: 11px; padding: 0 5px; }
+      .filter-count { min-width: 17px; height: 17px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">MP</span><span>Meu planner Diário</span></div>
+    <div class="today"><span class="today-dot" aria-hidden="true"></span><time id="data-hoje"></time></div>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="titulo-pagina">
+      <div><p class="eyebrow">Um passo de cada vez</p><h1 id="titulo-pagina">Tarefas que movem<br><em>seu dia.</em></h1></div>
+      <p class="intro-note">Organize suas prioridades e deixe espaço para o que importa.</p>
+    </section>
+    <section class="overview" aria-label="Resumo das tarefas">
+      <div class="metric"><span class="metric-label">No total</span><strong class="metric-value" id="total-tarefas">0</strong></div>
+      <div class="metric"><span class="metric-label">Em aberto</span><strong class="metric-value" id="tarefas-pendentes">0</strong></div>
+      <div class="metric"><span class="metric-label">Seu progresso</span><div class="progress-wrap"><div class="progress-track" role="progressbar" aria-label="Progresso das tarefas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-fill" id="progresso-fill"></div></div><span class="progress-label" id="progresso-label">0%</span></div></div>
+    </section>
+    <section class="panel" aria-label="Gerenciador de tarefas">
+      <div class="composer" id="composer">
+        <div class="section-heading"><h2>Uma nova tarefa</h2><span class="editing-label">Editando tarefa</span></div>
+        <form id="form-tarefa"><div class="form-row">
+          <input class="field title-field" type="text" id="input-titulo" placeholder="O que você precisa fazer?" maxlength="160" required aria-label="Título da tarefa">
+          <select class="field" id="input-prioridade" aria-label="Prioridade da tarefa"><option value="media">Prioridade média</option><option value="alta">Prioridade alta</option><option value="baixa">Prioridade baixa</option></select>
+          <input class="field" type="date" id="input-prazo" aria-label="Prazo da tarefa">
+          <div class="form-actions"><button class="primary-button" type="submit" id="botao-salvar"><span aria-hidden="true">+</span> Adicionar</button><button class="cancel-button" type="button" id="botao-cancelar">Cancelar</button></div>
+        </div></form>
+      </div>
+      <div class="list-controls">
+        <div class="filters" role="group" aria-label="Filtrar tarefas"><button class="filter-button" type="button" data-filtro="todas" aria-pressed="true">Todas <span class="filter-count" id="contagem-todas">0</span></button><button class="filter-button" type="button" data-filtro="pendentes" aria-pressed="false">Pendentes <span class="filter-count" id="contagem-pendentes">0</span></button><button class="filter-button" type="button" data-filtro="concluidas" aria-pressed="false">Concluídas <span class="filter-count" id="contagem-concluidas">0</span></button></div>
+        <label class="search-wrap"><span class="search-icon" aria-hidden="true">⌕</span><input class="search-input" type="search" id="busca-tarefas" placeholder="Buscar tarefa..." aria-label="Buscar tarefas" title="Atalho: Ctrl+K"></label>
+      </div>
+      <div class="list-heading"><h2 id="titulo-lista">Sua lista</h2><button class="clear-button" type="button" id="limpar-concluidas" disabled>Limpar concluídas</button></div>
+      <ul class="task-list" id="lista-tarefas" aria-live="polite"></ul>
+      <div class="empty-state" id="estado-vazio"><span class="empty-mark" aria-hidden="true">✓</span><strong id="vazio-titulo">Tudo começa com uma ideia.</strong><p id="vazio-texto">Adicione sua primeira tarefa para organizar o dia.</p></div>
+      <p class="status-message" id="mensagem-status" role="status"></p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
